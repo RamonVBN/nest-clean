@@ -13,6 +13,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+
+  STUDENT
+  INSTRUCTOR
+}
 
 model User {
 
@@ -20,9 +25,11 @@ model User {
   name String
   email String @unique
   password String
+  role UserRole @default(STUDENT)
 
   @@map("users")
   questions Question[]
+  answers Answer[]
 }
 
 model Question {
@@ -35,11 +42,29 @@ model Question {
   updatedAt DateTime? @updatedAt
 
   authorId String @map("author_id")
+  bestAnswerId String? @unique @map("best_answer_id")
 
   author User @relation(fields: [authorId], references: [id])
+  bestAnswer Answer? @relation("bestAnswer",fields: [bestAnswerId], references: [id])
+  answers Answer[]
 
   @@map("questions") 
 }
 
+model Answer {
 
+  id String @id @default(uuid())
 
+  content String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt
+
+  authorId String @map("author_id")
+  questionId String @map("question_id")
+
+  author User @relation(fields: [authorId], references: [id])
+  bestAnswerOn Question? @relation("bestAnswer")
+  Question Question @relation(fields: [questionId], references: [id])
+
+  @@map("answers") 
+}

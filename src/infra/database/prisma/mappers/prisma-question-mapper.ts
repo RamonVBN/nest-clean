@@ -9,7 +9,7 @@ export class PrismaQuestionMapper {
     static toDomain(raw: PrismaQuestion): Question {
          
         return Question.create({
-            title: raw.id,
+            title: raw.title,
             content: raw.content,
             authorId: new UniqueEntityID(raw.authorId),
             bestAnswerId: raw.bestAnswerId 

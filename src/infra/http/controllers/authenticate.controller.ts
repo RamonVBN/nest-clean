@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   HttpCode,
@@ -11,6 +12,9 @@ import { compare } from "bcryptjs"
 import { ZodValidationPipe } from "@/infra/http/pipes/zod-validation-pipe"
 import { PrismaService } from "@/infra/database/prisma/prisma.service"
 import z from "zod"
+import { AuthenticateStudentUseCase } from "@/domain/forum/application/use-cases/authenticate-student"
+import { WrongCredentialsErrors } from "@/domain/forum/application/use-cases/errors/wrong-credential-errors"
+import { Public } from "@/infra/auth/public"
 
 const authenticateBodySchema = z.object({
   email: z.email(),
@@ -22,36 +26,33 @@ type AuthenticateBody = z.infer<typeof authenticateBodySchema>
 @Controller("/sessions")
 export class AuthenticateContrroller {
   constructor(
-    private prisma: PrismaService,
-    private jwt: JwtService,
+    private authenticateStudent: AuthenticateStudentUseCase
   ) {}
 
   @Post()
   @HttpCode(201)
+  @Public()
   @UsePipes(new ZodValidationPipe(authenticateBodySchema))
   async handle(@Body() body: AuthenticateBody) {
     const { email, password } = authenticateBodySchema.parse(body)
 
-    const userExists = await this.prisma.user.findUnique({
-      where: {
-        email,
-      },
-    })
+    const result = await this.authenticateStudent.execute({email, password})
 
-    if (!userExists) {
-      throw new UnauthorizedException("User credentials do not match")
+    if (result.isLeft()){
+
+      const error = result.value
+      switch (error.constructor) {
+        case WrongCredentialsErrors:
+          throw new UnauthorizedException(error.message)
+        default:
+          throw new BadRequestException(error.message)
+      }
     }
 
-    const isPasswordValid = compare(password, userExists.password)
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException("User credentials do not match")
-    }
-
-    const accessToken = this.jwt.sign({ sub: userExists.id })
+    const { accessToken } = result.value
 
     return {
-      access_token: accessToken,
+      access_token: accessToken
     }
   }
 }

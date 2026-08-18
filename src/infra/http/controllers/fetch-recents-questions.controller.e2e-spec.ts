@@ -58,6 +58,8 @@ describe("Fetch Recent Questions (E2E)", () => {
       .get("/questions")
       .set("Authorization", `Bearer ${accessToken}`)
 
+      console.log(response.body)
+
     expect(response.statusCode).toBe(200)
     expect(response.body).toEqual({
       questions: [
